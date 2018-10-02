@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"./handlers"
+	"gitlab.com/chess-fork/go-fork/handlers"
 )
 
 func main() {

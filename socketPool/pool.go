@@ -1,61 +1,57 @@
-package socketPool
+package socketpool
 
 import (
 	"log"
 
-	"../types"
+	"gitlab.com/chess-fork/go-fork/types"
 
+	"github.com/dchest/uniuri"
 	"github.com/gorilla/websocket"
 )
 
-type browser struct {
-	userid string
-	conn   *websocket.Conn
+type client struct {
+	id   string
+	conn *websocket.Conn
 }
 
-var list []browser
+var clients = make(map[string]client)
 
-func Add(userid string, conn *websocket.Conn) {
-	brw := browser{userid: userid, conn: conn}
-	list = append(list, brw)
+func Add(conn *websocket.Conn) {
+	id := GenerateUniqueID()
+	clients[id] = client{id: id, conn: conn}
 }
 
-func find(userid string) int {
-	idx := -1
-	for i := 0; i < len(list); i++ {
-		if userid == list[i].userid {
-			idx = i
-			break
-		}
+func Remove(id string) {
+	delete(clients, id)
+}
+
+func SendToAll(msg string) {
+	for _, client := range clients {
+		client.conn.WriteJSON(types.Response{Type: "message", Payload: msg})
 	}
-	return idx
 }
 
-func Status(userid string) bool {
-	if find(userid) == -1 {
-		return false
-	} else {
+func Exists(id string) bool {
+	if _, exists := clients[id]; exists {
 		return true
 	}
+
+	return false
 }
 
-func Remove(userid string) {
-	idx := find(userid)
-	list[idx] = list[len(list)-1] // Copy last element to index i.
-	list[len(list)-1] = browser{} // Erase last element (write zero value).
-	list = list[:len(list)-1]     // Truncate slice.
+func GenerateUniqueID() string {
+	id := uniuri.New()
+	if Exists(id) {
+		return GenerateUniqueID()
+	}
+
+	return id
 }
 
 func Print() {
 	log.Println("{")
-	for _, element := range list {
-		log.Println(" userid:[" + element.userid + "]" + " conn:[" + element.conn.RemoteAddr().String() + "]")
+	for _, element := range clients {
+		log.Println(" id:[" + element.id + "]" + " conn:[" + element.conn.RemoteAddr().String() + "]")
 	}
 	log.Println("}")
-}
-
-func SendToAll(msg string) {
-	for i := 0; i < len(list); i++ {
-		list[i].conn.WriteJSON(types.Response{Type: "message", Payload: msg})
-	}
 }

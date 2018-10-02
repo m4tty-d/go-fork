@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"../socketPool"
-	"../types"
+	"gitlab.com/chess-fork/go-fork/socketpool"
+	"gitlab.com/chess-fork/go-fork/types"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,8 +19,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	socketPool.Add("randomid", conn)
-	socketPool.Print()
+	socketpool.Add(conn)
+	socketpool.Print()
 
 	for {
 		clientReq := &types.Request{}
@@ -31,7 +31,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch clientReq.Type {
 		case "message":
-			socketPool.SendToAll(clientReq.Payload)
+			socketpool.SendToAll(clientReq.Payload)
 		default:
 			return
 		}
