@@ -21,8 +21,17 @@ func Add(conn *websocket.Conn) {
 	clients[id] = client{id: id, conn: conn}
 }
 
-func Remove(id string) {
+func RemoveById(id string) {
 	delete(clients, id)
+}
+
+func RemoveByConn(conn *websocket.Conn) {
+	for _, client := range clients {
+		if client.conn == conn {
+			delete(clients, client.id)
+			break
+		}
+	}
 }
 
 func SendToAll(msg string) {

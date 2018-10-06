@@ -27,6 +27,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		err := conn.ReadJSON(clientReq)
 		if err != nil {
 			log.Println(err)
+			conn.Close()
+			socketpool.RemoveByConn(conn)
 			return
 		}
 		switch clientReq.Type {

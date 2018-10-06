@@ -13,5 +13,5 @@ func main() {
 	}
 
 	http.HandleFunc("/ws", handlers.Handler)
-	log.Fatal(http.ListenAndServe(":8089", nil))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8089", nil))
 }
