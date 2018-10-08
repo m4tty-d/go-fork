@@ -2,6 +2,7 @@ package socketpool
 
 import (
 	"log"
+	"time"
 
 	"gitlab.com/chess-fork/go-fork/types"
 
@@ -9,39 +10,34 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type client struct {
-	id   string
-	conn *websocket.Conn
-}
+var players = make(map[string]types.Player)
 
-var clients = make(map[string]client)
-
-func Add(conn *websocket.Conn) {
+func Add(conn *websocket.Conn, time time.Time) {
 	id := GenerateUniqueID()
-	clients[id] = client{id: id, conn: conn}
+	players[id] = types.Player{Id: id, Conn: conn, Time: time}
 }
 
 func RemoveById(id string) {
-	delete(clients, id)
+	delete(players, id)
 }
 
 func RemoveByConn(conn *websocket.Conn) {
-	for _, client := range clients {
-		if client.conn == conn {
-			delete(clients, client.id)
+	for _, player := range players {
+		if player.Conn == conn {
+			delete(players, player.Id)
 			break
 		}
 	}
 }
 
 func SendToAll(msg string) {
-	for _, client := range clients {
-		client.conn.WriteJSON(types.Server{Type: "message", Payload: msg})
+	for _, player := range players {
+		player.Conn.WriteJSON(types.Server{Type: "message", Payload: msg})
 	}
 }
 
 func Exists(id string) bool {
-	if _, exists := clients[id]; exists {
+	if _, exists := players[id]; exists {
 		return true
 	}
 
@@ -59,8 +55,22 @@ func GenerateUniqueID() string {
 
 func Print() {
 	log.Println("{")
-	for _, element := range clients {
-		log.Println(" id:[" + element.id + "]" + " conn:[" + element.conn.RemoteAddr().String() + "]")
+	for _, element := range players {
+		log.Println(" id:[" + element.Id + "]\n" + " conn:[" + element.Conn.RemoteAddr().String() + "]\n" + " time:[" + element.Time.String() + "]")
 	}
 	log.Println("}")
+}
+
+func VerifyTime() {
+	for _, element := range players {
+		element.Time.Add(-time.Second)
+		if element.Time.Hour() == 23 {
+			// time end
+			element.Conn.WriteJSON(types.Server{Type: "clock", Payload: "end"})
+			log.Println("time ended")
+		} else {
+			h, m, s := element.Time.Clock()
+			element.Conn.WriteJSON(types.Server{Type: "clock", Payload: types.Watch{H: h, M: m, S: s}})
+		}
+	}
 }

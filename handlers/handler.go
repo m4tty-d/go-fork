@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"gitlab.com/chess-fork/go-fork/socketpool"
 	"gitlab.com/chess-fork/go-fork/types"
@@ -19,7 +20,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	socketpool.Add(conn)
+	time, _ := time.Parse(time.Kitchen, "00:20AM")
+	socketpool.Add(conn, time)
 	socketpool.Print()
 
 	for {
