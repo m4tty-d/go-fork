@@ -36,7 +36,7 @@ func RemoveByConn(conn *websocket.Conn) {
 
 func SendToAll(msg string) {
 	for _, client := range clients {
-		client.conn.WriteJSON(types.Response{Type: "message", Payload: msg})
+		client.conn.WriteJSON(types.Server{Type: "message", Payload: msg})
 	}
 }
 
