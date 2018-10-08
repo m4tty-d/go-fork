@@ -1,11 +1,11 @@
 package types
 
-type Request struct {
+type Client struct {
 	Type    string `json:"type"`
 	Payload string `json:"payload"`
 }
 
-type Response struct {
+type Server struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload"`
 }

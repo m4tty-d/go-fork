@@ -23,7 +23,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	socketpool.Print()
 
 	for {
-		clientReq := &types.Request{}
+		clientReq := &types.Client{}
 		err := conn.ReadJSON(clientReq)
 		if err != nil {
 			log.Println(err)
