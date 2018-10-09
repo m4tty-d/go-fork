@@ -63,7 +63,7 @@ func Print() {
 
 func VerifyTime() {
 	for _, element := range players {
-		element.Time.Add(-time.Second)
+		element.Time = element.Time.Add(-time.Second)
 		if element.Time.Hour() == 23 {
 			// time end
 			element.Conn.WriteJSON(types.Server{Type: "clock", Payload: "end"})
