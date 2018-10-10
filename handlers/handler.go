@@ -23,15 +23,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	socketpool.Print()*/
 
 	for {
-		clientReq := &types.Client{}
-		err := conn.ReadJSON(clientReq)
+		client := &types.Client{}
+		err := conn.ReadJSON(client)
 		if err != nil {
 			log.Println(err)
 			conn.Close()
 			//socketpool.RemoveByConn(conn)
 			return
 		}
-		switch clientReq.Type {
+		switch client.Type {
+		case "createGame":
+			CreateRoom(conn, client.Payload)
 		case "message":
 			//socketpool.SendToAll(clientReq.Payload)
 		default:

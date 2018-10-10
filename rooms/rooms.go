@@ -1,6 +1,9 @@
 package rooms
 
 import (
+	"errors"
+	"log"
+	"strconv"
 	"time"
 
 	"github.com/andrewbackes/chess/piece"
@@ -14,24 +17,41 @@ import (
 	"gitlab.com/chess-fork/go-fork/types"
 )
 
-var rooms = make(map[string]types.Room)
+var list = make(map[string]types.Room)
 
 func CreateRoom(GameTime time.Time) string {
-	room := types.Room{}
-	room.ID = bson.NewObjectId().Hex()
-	room.GameTime = GameTime
-	room.Game = game.New()
-	rooms[room.ID] = room
+	room := types.Room{ID: bson.NewObjectId().Hex(), GameTime: GameTime, Game: game.New(), IsRunning: false, Players: make(map[string]*types.Player)}
+	list[room.ID] = room
 	return room.ID
 }
 
-func AddPlayerToRoom(RoomID, PlayerID string, Conn *websocket.Conn, Color piece.Color) string {
-	player := types.Player{}
-	player.ID = bson.NewObjectId().Hex()
-	player.Color = Color
-	playerStopper := rooms[RoomID].GameTime
-	player.Stopper = &playerStopper
-	return player.ID
+func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (string, error) {
+	if len(list[roomID].Players) == 2 {
+		return "", errors.New("full")
+	}
+	playerStopper := list[roomID].GameTime
+	player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper}
+	list[roomID].Players[player.ID] = &player
+	return player.ID, nil
+}
+
+func Print() {
+	for roomID, room := range list {
+		str := "\n{\n"
+		str += " RommID:[" + roomID + "]\n"
+		str += " IsRunning:[" + strconv.FormatBool(room.IsRunning) + "]\n"
+		str += " GameTime:[" + room.GameTime.String() + "]\n"
+		for playerID, player := range room.Players {
+			str += " {\n"
+			str += "  PlayerID:[" + playerID + "]\n"
+			str += "  Connection:[" + player.Conn.RemoteAddr().String() + "]\n"
+			str += "  Color:[" + player.Color.String() + "]\n"
+			str += "  Stopper:[" + player.Stopper.String() + "]\n"
+			str += " }\n"
+		}
+		str += "}"
+		log.Println(str)
+	}
 }
 
 /*var players = make(map[string]types.Player)
