@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"gitlab.com/chess-fork/go-fork/handlers"
-	"gitlab.com/chess-fork/go-fork/socketpool"
 )
 
 func main() {
@@ -17,10 +16,11 @@ func main() {
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for range ticker.C {
-			socketpool.VerifyTime()
+			//socketpool.VerifyTime()
 		}
 	}()
 
+	log.Println("Server running on '8089' port!")
 	http.HandleFunc("/ws", handlers.Handler)
 	log.Fatal(http.ListenAndServe("127.0.0.1:8089", nil))
 }

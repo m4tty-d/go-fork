@@ -3,9 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"time"
 
-	"gitlab.com/chess-fork/go-fork/socketpool"
 	"gitlab.com/chess-fork/go-fork/types"
 
 	"github.com/gorilla/websocket"
@@ -20,9 +18,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	time, _ := time.Parse(time.Kitchen, "00:20AM")
-	socketpool.Add(conn, time)
-	socketpool.Print()
+	/*time, _ := time.Parse(time.Kitchen, "00:01AM")
+	socketpool.Add(conn, &time)
+	socketpool.Print()*/
 
 	for {
 		clientReq := &types.Client{}
@@ -30,12 +28,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 			conn.Close()
-			socketpool.RemoveByConn(conn)
+			//socketpool.RemoveByConn(conn)
 			return
 		}
 		switch clientReq.Type {
 		case "message":
-			socketpool.SendToAll(clientReq.Payload)
+			//socketpool.SendToAll(clientReq.Payload)
 		default:
 			return
 		}
