@@ -18,6 +18,16 @@ type creategame struct {
 	AdditionalTime int    `json:"additionalTime"`
 }
 
+type joingame struct {
+	Color  string `json:"color"`
+	RoomID string `json:"roomid"`
+}
+
+type joingamereturn struct {
+	PlayerID string `json:"playerid"`
+	Color    string `json:"color"`
+}
+
 func CreateRoom(conn *websocket.Conn, payload string) {
 	var creategame creategame
 	err := json.Unmarshal([]byte(payload), &creategame)
@@ -39,7 +49,7 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 		} else {
 			return
 		}
-		playerID, err := rooms.AddPlayerToRoom(roomID, conn, color)
+		playerID, _, err := rooms.AddPlayerToRoom(roomID, conn, color)
 		if err != nil {
 			return
 		}
@@ -48,4 +58,17 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	} else {
 		return
 	}
+}
+
+func JoinGame(conn *websocket.Conn, payload string) {
+	var joingame joingame
+	err := json.Unmarshal([]byte(payload), &joingame)
+	if err != nil {
+		return
+	}
+	playerID, color, err := rooms.AddPlayerToRoom(joingame.RoomID, conn, piece.BothColors)
+	if err != nil {
+		return
+	}
+	conn.WriteJSON(types.Server{Type: "playerID", Payload: joingamereturn{PlayerID: playerID, Color: color}})
 }

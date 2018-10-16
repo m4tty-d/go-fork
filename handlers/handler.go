@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"gitlab.com/chess-fork/go-fork/rooms"
 	"gitlab.com/chess-fork/go-fork/types"
 
 	"github.com/gorilla/websocket"
@@ -27,13 +28,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		err := conn.ReadJSON(client)
 		if err != nil {
 			log.Println(err)
+			rooms.PauseGame(conn)
 			conn.Close()
-			//socketpool.RemoveByConn(conn)
 			return
 		}
 		switch client.Type {
 		case "createGame":
 			CreateRoom(conn, client.Payload)
+		case "joinGame":
+			JoinGame(conn, client.Payload)
 		case "message":
 			//socketpool.SendToAll(clientReq.Payload)
 		default:

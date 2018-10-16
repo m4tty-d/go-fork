@@ -20,33 +20,69 @@ import (
 var list = make(map[string]types.Room)
 
 func CreateRoom(GameTime time.Time) string {
-	room := types.Room{ID: bson.NewObjectId().Hex(), GameTime: GameTime, Game: game.New(), IsRunning: false, Players: make(map[string]*types.Player)}
+	isRunning := true
+	room := types.Room{ID: bson.NewObjectId().Hex(), GameTime: GameTime, Game: game.New(), IsRunning: &isRunning}
 	list[room.ID] = room
 	return room.ID
 }
 
-func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (string, error) {
-	if len(list[roomID].Players) == 2 {
-		return "", errors.New("full")
+func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (string, string, error) {
+	room := list[roomID]
+
+	if room.Player1 != nil && room.Player2 != nil {
+		return "", "", errors.New("full")
 	}
+
 	playerStopper := list[roomID].GameTime
-	player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper}
-	list[roomID].Players[player.ID] = &player
-	return player.ID, nil
+
+	if color != piece.BothColors {
+		player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper}
+		room.Player1 = &player
+		list[roomID] = room
+		return player.ID, "", nil
+	}
+
+	player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Stopper: &playerStopper}
+	if room.Player1.Color == piece.Black {
+		player.Color = piece.White
+	} else {
+		player.Color = piece.Black
+	}
+	room.Player2 = &player
+	return player.ID, player.Color.String(), nil
+
+}
+
+func PauseGame(conn *websocket.Conn) {
+	for _, room := range list {
+		if conn == room.Player1.Conn || conn == room.Player2.Conn {
+			if *room.IsRunning {
+				*room.IsRunning = false
+				Print()
+			}
+			return
+		}
+	}
 }
 
 func Print() {
 	for roomID, room := range list {
 		str := "\n{\n"
 		str += " RommID:[" + roomID + "]\n"
-		str += " IsRunning:[" + strconv.FormatBool(room.IsRunning) + "]\n"
+		str += " IsRunning:[" + strconv.FormatBool(*room.IsRunning) + "]\n"
 		str += " GameTime:[" + room.GameTime.String() + "]\n"
-		for playerID, player := range room.Players {
+		str += " {\n"
+		str += "  PlayerID:[" + room.Player1.ID + "]\n"
+		str += "  Connection:[" + room.Player1.Conn.RemoteAddr().String() + "]\n"
+		str += "  Color:[" + room.Player1.Color.String() + "]\n"
+		str += "  Stopper:[" + room.Player1.Stopper.String() + "]\n"
+		str += " }\n"
+		if room.Player2 != nil {
 			str += " {\n"
-			str += "  PlayerID:[" + playerID + "]\n"
-			str += "  Connection:[" + player.Conn.RemoteAddr().String() + "]\n"
-			str += "  Color:[" + player.Color.String() + "]\n"
-			str += "  Stopper:[" + player.Stopper.String() + "]\n"
+			str += "  PlayerID:[" + room.Player2.ID + "]\n"
+			str += "  Connection:[" + room.Player2.Conn.RemoteAddr().String() + "]\n"
+			str += "  Color:[" + room.Player2.Color.String() + "]\n"
+			str += "  Stopper:[" + room.Player2.Stopper.String() + "]\n"
 			str += " }\n"
 		}
 		str += "}"

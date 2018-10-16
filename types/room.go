@@ -11,10 +11,11 @@ import (
 
 type Room struct {
 	ID        string
-	Players   map[string]*Player
+	Player1   *Player
+	Player2   *Player
 	Game      *game.Game
 	GameTime  time.Time
-	IsRunning bool
+	IsRunning *bool
 }
 
 type Player struct {
