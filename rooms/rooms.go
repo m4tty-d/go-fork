@@ -20,7 +20,7 @@ import (
 var list = make(map[string]types.Room)
 
 func CreateRoom(GameTime time.Time) string {
-	isRunning := true
+	isRunning := false
 	room := types.Room{ID: bson.NewObjectId().Hex(), GameTime: GameTime, Game: game.New(), IsRunning: &isRunning}
 	list[room.ID] = room
 	return room.ID

@@ -61,12 +61,7 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 }
 
 func JoinGame(conn *websocket.Conn, payload string) {
-	var joingame joingame
-	err := json.Unmarshal([]byte(payload), &joingame)
-	if err != nil {
-		return
-	}
-	playerID, color, err := rooms.AddPlayerToRoom(joingame.RoomID, conn, piece.BothColors)
+	playerID, color, err := rooms.AddPlayerToRoom(payload, conn, piece.BothColors)
 	if err != nil {
 		return
 	}
