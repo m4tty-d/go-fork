@@ -2,62 +2,85 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/andrewbackes/chess/piece"
-
+	"github.com/gorilla/websocket"
 	"gitlab.com/chess-fork/go-fork/rooms"
 	"gitlab.com/chess-fork/go-fork/types"
-
-	"github.com/gorilla/websocket"
 )
 
-type creategame struct {
+type createGameRequest struct {
 	Color          string `json:"color"`
+	BaseTime       int    `json:"baseTime"`
+	AdditionalTime int    `json:"AdditionalTime"`
+}
+
+type createGameResponse struct {
+	RoomID         string `json:"roomId"`
 	BaseTime       int    `json:"baseTime"`
 	AdditionalTime int    `json:"additionalTime"`
 }
 
-type joingame struct {
+type joinGameRequest struct {
 	Color  string `json:"color"`
-	RoomID string `json:"roomid"`
+	RoomID string `json:"roomId"`
 }
 
-type joingamereturn struct {
-	PlayerID string `json:"playerid"`
+type joinGameResponse struct {
+	PlayerID string `json:"playerId"`
 	Color    string `json:"color"`
 }
 
+func getTimeFromBaseAndAdditional(base int, additional int) time.Time {
+	s := additional % 60
+	m := (base + additional/60) % 60
+	h := (base + additional/60) / 60
+
+	return time.Date(0, 0, 0, h, m, s, 0, time.UTC)
+}
+
+func isTimeValid(base int, additional int) bool {
+	return base >= 1 && base <= 120 && additional >= 0 && additional <= 120
+}
+
 func CreateRoom(conn *websocket.Conn, payload string) {
-	var creategame creategame
-	err := json.Unmarshal([]byte(payload), &creategame)
+	var createGameReq createGameRequest
+	err := json.Unmarshal([]byte(payload), &createGameReq)
 	if err != nil {
+		// conn.WriteJSON(types.Server{Type: "error", Payload: "Wrong json format!"})
+		log.Println(err)
 		return
 	}
-	if creategame.BaseTime >= 1 && creategame.BaseTime <= 120 && creategame.AdditionalTime >= 0 && creategame.AdditionalTime <= 120 {
-		s := creategame.AdditionalTime % 60
-		m := (creategame.BaseTime + creategame.AdditionalTime/60) % 60
-		h := (creategame.BaseTime + creategame.AdditionalTime/60) / 60
-		time := time.Date(0, 0, 0, h, m, s, 0, time.UTC)
-		roomID := rooms.CreateRoom(time)
-		conn.WriteJSON(types.Server{Type: "roomID", Payload: roomID})
-		var color piece.Color
-		if creategame.Color == "white" {
-			color = piece.White
-		} else if creategame.Color == "black" {
-			color = piece.Black
-		} else {
-			return
-		}
-		playerID, _, err := rooms.AddPlayerToRoom(roomID, conn, color)
-		if err != nil {
-			return
-		}
-		conn.WriteJSON(types.Server{Type: "playerID", Payload: playerID})
-		rooms.Print()
+
+	log.Println(createGameReq)
+	log.Println(createGameReq.BaseTime)
+	log.Println(createGameReq.AdditionalTime)
+
+	if !isTimeValid(createGameReq.BaseTime, createGameReq.AdditionalTime) {
+		// conn.WriteJSON(types.Server{Type: "error", Payload: "Unsupported time!"})
+		log.Println("timeNotValid")
+		return
+	}
+
+	time := getTimeFromBaseAndAdditional(createGameReq.BaseTime, createGameReq.AdditionalTime)
+	roomID := rooms.CreateRoom(time)
+	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: createGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
+
+	var color piece.Color
+	if createGameReq.Color == "white" {
+		color = piece.White
 	} else {
-		return
+		color = piece.Black
 	}
+
+	playerID, _, err := rooms.AddPlayerToRoom(roomID, conn, color)
+	if err != nil {
+		conn.WriteJSON(types.Server{Type: "error", Payload: "Error while adding player to room!"})
+	}
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: joinGameResponse{PlayerID: playerID, Color: createGameReq.Color}})
+	rooms.Print()
 }
 
 func JoinGame(conn *websocket.Conn, payload string) {
@@ -65,5 +88,5 @@ func JoinGame(conn *websocket.Conn, payload string) {
 	if err != nil {
 		return
 	}
-	conn.WriteJSON(types.Server{Type: "playerID", Payload: joingamereturn{PlayerID: playerID, Color: color}})
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: joinGameResponse{PlayerID: playerID, Color: color}})
 }
