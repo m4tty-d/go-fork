@@ -6,15 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/andrewbackes/chess/piece"
-
-	"github.com/gorilla/websocket"
-
 	"github.com/andrewbackes/chess/game"
-
-	"gopkg.in/mgo.v2/bson"
-
+	"github.com/andrewbackes/chess/piece"
+	"github.com/gorilla/websocket"
 	"gitlab.com/chess-fork/go-fork/types"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var list = make(map[string]types.Room)
@@ -28,6 +24,8 @@ func CreateRoom(GameTime time.Time) string {
 
 func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (string, string, error) {
 	room := list[roomID]
+
+	log.Println("AddPlayerToRoom, room: ", room)
 
 	if room.Player1 != nil && room.Player2 != nil {
 		return "", "", errors.New("full")
@@ -49,45 +47,64 @@ func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (st
 		player.Color = piece.Black
 	}
 	room.Player2 = &player
+	list[roomID] = room
 	return player.ID, player.Color.String(), nil
 
 }
 
 func PauseGame(conn *websocket.Conn) {
-	for _, room := range list {
+	for roomID, room := range list {
 		if conn == room.Player1.Conn || conn == room.Player2.Conn {
 			if *room.IsRunning {
 				*room.IsRunning = false
-				Print()
+				Print(roomID)
 			}
 			return
 		}
 	}
 }
 
-func Print() {
-	for roomID, room := range list {
-		str := "\n{\n"
-		str += " RommID:[" + roomID + "]\n"
-		str += " IsRunning:[" + strconv.FormatBool(*room.IsRunning) + "]\n"
-		str += " GameTime:[" + room.GameTime.String() + "]\n"
-		str += " {\n"
-		str += "  PlayerID:[" + room.Player1.ID + "]\n"
-		str += "  Connection:[" + room.Player1.Conn.RemoteAddr().String() + "]\n"
-		str += "  Color:[" + room.Player1.Color.String() + "]\n"
-		str += "  Stopper:[" + room.Player1.Stopper.String() + "]\n"
-		str += " }\n"
-		if room.Player2 != nil {
-			str += " {\n"
-			str += "  PlayerID:[" + room.Player2.ID + "]\n"
-			str += "  Connection:[" + room.Player2.Conn.RemoteAddr().String() + "]\n"
-			str += "  Color:[" + room.Player2.Color.String() + "]\n"
-			str += "  Stopper:[" + room.Player2.Stopper.String() + "]\n"
-			str += " }\n"
-		}
-		str += "}"
-		log.Println(str)
+func PrintAll() {
+	for roomID, _ := range list {
+		Print(roomID)
 	}
+}
+
+func Print(roomID string) {
+	room := list[roomID]
+
+	str := "\n{\n"
+	str += " RoomID:[" + roomID + "]\n"
+	str += " IsRunning:[" + strconv.FormatBool(*room.IsRunning) + "]\n"
+	str += " GameTime:[" + room.GameTime.String() + "]\n"
+	str += " {\n"
+	str += "  PlayerID:[" + room.Player1.ID + "]\n"
+	str += "  Connection:[" + room.Player1.Conn.RemoteAddr().String() + "]\n"
+	str += "  Color:[" + room.Player1.Color.String() + "]\n"
+	str += "  Stopper:[" + room.Player1.Stopper.String() + "]\n"
+	str += " }\n"
+	if room.Player2 != nil {
+		str += " {\n"
+		str += "  PlayerID:[" + room.Player2.ID + "]\n"
+		str += "  Connection:[" + room.Player2.Conn.RemoteAddr().String() + "]\n"
+		str += "  Color:[" + room.Player2.Color.String() + "]\n"
+		str += "  Stopper:[" + room.Player2.Stopper.String() + "]\n"
+		str += " }\n"
+	}
+	str += "}"
+	log.Println(str)
+}
+
+func NotifyPlayers(roomID string, msg types.Server) {
+	room := list[roomID]
+
+	log.Println("NotifyPlayers:")
+	Print(roomID)
+
+	room.Player1.Conn.WriteJSON(msg)
+	room.Player2.Conn.WriteJSON(msg)
+
+	log.Println("majomkenyerfa")
 }
 
 /*var players = make(map[string]types.Player)
