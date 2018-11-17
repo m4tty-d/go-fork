@@ -4,10 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"gitlab.com/chess-fork/go-fork/rooms"
-	"gitlab.com/chess-fork/go-fork/types"
-
 	"github.com/gorilla/websocket"
+	"gitlab.com/chess-fork/go-fork/types"
 )
 
 var Upgrader websocket.Upgrader
@@ -28,7 +26,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		err := conn.ReadJSON(client)
 		if err != nil {
 			log.Println(err)
-			rooms.PauseGame(conn)
+			// rooms.PauseGame(conn)
 			conn.Close()
 			return
 		}

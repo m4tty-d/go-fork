@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"log"
-	"time"
 
 	"github.com/andrewbackes/chess/piece"
 	"github.com/gorilla/websocket"
@@ -27,17 +26,14 @@ type joinGameRequest struct {
 	RoomID string `json:"roomId"`
 }
 
-type joinGameResponse struct {
+type createPlayerResponse struct {
 	PlayerID string `json:"playerId"`
 	Color    string `json:"color"`
 }
 
-func getTimeFromBaseAndAdditional(base int, additional int) time.Time {
-	s := additional % 60
-	m := (base + additional/60) % 60
-	h := (base + additional/60) / 60
-
-	return time.Date(0, 0, 0, h, m, s, 0, time.UTC)
+type joinGameResponse struct {
+	BaseTime       int `json:"baseTime"`
+	AdditionalTime int `json:"additionalTime"`
 }
 
 func isTimeValid(base int, additional int) bool {
@@ -63,8 +59,7 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 		return
 	}
 
-	time := getTimeFromBaseAndAdditional(createGameReq.BaseTime, createGameReq.AdditionalTime)
-	roomID := rooms.CreateRoom(time)
+	roomID := rooms.CreateRoom(createGameReq.BaseTime, createGameReq.AdditionalTime)
 	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: createGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
 
 	var color piece.Color
@@ -78,7 +73,7 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	if err != nil {
 		conn.WriteJSON(types.Server{Type: "error", Payload: "Error while adding player to room!"})
 	}
-	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: joinGameResponse{PlayerID: playerID, Color: createGameReq.Color}})
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: createPlayerResponse{PlayerID: playerID, Color: createGameReq.Color}})
 	rooms.PrintAll()
 }
 
@@ -98,6 +93,14 @@ func JoinGame(conn *websocket.Conn, payload string) {
 	if err != nil {
 		return
 	}
-	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: joinGameResponse{PlayerID: playerID, Color: color}})
+
+	if color == "White" {
+		color = "white"
+	} else {
+		color = "black"
+	}
+
+	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: joinGameResponse{BaseTime: rooms.GetRoom(joinGameReq.RoomID).BaseTime, AdditionalTime: rooms.GetRoom(joinGameReq.RoomID).AdditionalTime}})
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: createPlayerResponse{PlayerID: playerID, Color: color}})
 	rooms.NotifyPlayers(joinGameReq.RoomID, types.Server{Type: "gameCanStart"})
 }

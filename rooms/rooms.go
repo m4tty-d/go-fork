@@ -15,9 +15,16 @@ import (
 
 var list = make(map[string]types.Room)
 
-func CreateRoom(GameTime time.Time) string {
+func getTimeFromBaseAndAdditional(base int) time.Time {
+	m := base % 60
+	h := base / 60
+
+	return time.Date(0, 0, 0, h, m, 0, 0, time.UTC)
+}
+
+func CreateRoom(BaseTime int, AdditionalTime int) string {
 	isRunning := false
-	room := types.Room{ID: bson.NewObjectId().Hex(), GameTime: GameTime, Game: game.New(), IsRunning: &isRunning}
+	room := types.Room{ID: bson.NewObjectId().Hex(), BaseTime: BaseTime, AdditionalTime: AdditionalTime, Game: game.New(), IsRunning: &isRunning}
 	list[room.ID] = room
 	return room.ID
 }
@@ -31,7 +38,7 @@ func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (st
 		return "", "", errors.New("full")
 	}
 
-	playerStopper := list[roomID].GameTime
+	playerStopper := getTimeFromBaseAndAdditional(list[roomID].BaseTime)
 
 	if color != piece.BothColors {
 		player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper}
@@ -76,7 +83,8 @@ func Print(roomID string) {
 	str := "\n{\n"
 	str += " RoomID:[" + roomID + "]\n"
 	str += " IsRunning:[" + strconv.FormatBool(*room.IsRunning) + "]\n"
-	str += " GameTime:[" + room.GameTime.String() + "]\n"
+	str += " BaseTime:[" + strconv.Itoa(room.BaseTime) + "]\n"
+	str += " AdditonalTime:[" + strconv.Itoa(room.AdditionalTime) + "]\n"
 	str += " {\n"
 	str += "  PlayerID:[" + room.Player1.ID + "]\n"
 	str += "  Connection:[" + room.Player1.Conn.RemoteAddr().String() + "]\n"
@@ -105,6 +113,10 @@ func NotifyPlayers(roomID string, msg types.Server) {
 	room.Player2.Conn.WriteJSON(msg)
 
 	log.Println("majomkenyerfa")
+}
+
+func GetRoom(roomID string) types.Room {
+	return list[roomID]
 }
 
 /*var players = make(map[string]types.Player)
