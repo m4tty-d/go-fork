@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/gorilla/websocket"
 	"gitlab.com/chess-fork/go-fork/rooms"
@@ -34,6 +35,16 @@ type createPlayerResponse struct {
 type joinGameResponse struct {
 	BaseTime       int `json:"baseTime"`
 	AdditionalTime int `json:"additionalTime"`
+}
+
+type moveRequest struct {
+	PlayerID string `json:"playerId"`
+	RoomID   string `json:"roomId"`
+	Move     string `json:"move"`
+}
+
+type moveResponse struct {
+	Fen string `json:"fen"`
 }
 
 func isTimeValid(base int, additional int) bool {
@@ -103,4 +114,30 @@ func JoinGame(conn *websocket.Conn, payload string) {
 	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: joinGameResponse{BaseTime: rooms.GetRoom(joinGameReq.RoomID).BaseTime, AdditionalTime: rooms.GetRoom(joinGameReq.RoomID).AdditionalTime}})
 	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: createPlayerResponse{PlayerID: playerID, Color: color}})
 	rooms.NotifyPlayers(joinGameReq.RoomID, types.Server{Type: "gameCanStart"})
+}
+
+func Move(conn *websocket.Conn, payload string) {
+	var moveReq moveRequest
+	err := json.Unmarshal([]byte(payload), &moveReq)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Println(moveReq)
+
+	room := rooms.GetRoom(moveReq.RoomID)
+
+	move, err := room.Game.Position().ParseMove(moveReq.Move)
+
+	room.Game.MakeMove(move)
+
+	fenStr, err := fen.Encode(room.Game.Position())
+
+	if room.Player1.ID == moveReq.PlayerID {
+		room.Player2.Conn.WriteJSON(types.Server{Type: "move", Payload: moveResponse{Fen: fenStr}})
+	} else {
+		room.Player1.Conn.WriteJSON(types.Server{Type: "move", Payload: moveResponse{Fen: fenStr}})
+	}
 }

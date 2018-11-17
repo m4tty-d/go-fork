@@ -35,6 +35,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			CreateRoom(conn, client.Payload)
 		case "joinGame":
 			JoinGame(conn, client.Payload)
+		case "move":
+			Move(conn, client.Payload)
 		case "message":
 			//socketpool.SendToAll(clientReq.Payload)
 		default:
