@@ -115,6 +115,16 @@ func NotifyPlayers(roomID string, msg types.Server) {
 	log.Println("majomkenyerfa")
 }
 
+func NotifyOtherPlayer(roomID string, PlayerID string, msg types.Server) {
+	room := list[roomID]
+
+	if room.Player1.ID == PlayerID {
+		room.Player2.Conn.WriteJSON(msg)
+	} else {
+		room.Player1.Conn.WriteJSON(msg)
+	}
+}
+
 func GetRoom(roomID string) types.Room {
 	return list[roomID]
 }

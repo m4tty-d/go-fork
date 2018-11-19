@@ -44,7 +44,8 @@ type moveRequest struct {
 }
 
 type moveResponse struct {
-	Fen string `json:"fen"`
+	Fen  string `json:"fen"`
+	Move string `json:"move"`
 }
 
 func isTimeValid(base int, additional int) bool {
@@ -133,11 +134,9 @@ func Move(conn *websocket.Conn, payload string) {
 
 	room.Game.MakeMove(move)
 
+	// TODO: validálni, hogy helyes volt e a lépés
+
 	fenStr, err := fen.Encode(room.Game.Position())
 
-	if room.Player1.ID == moveReq.PlayerID {
-		room.Player2.Conn.WriteJSON(types.Server{Type: "move", Payload: moveResponse{Fen: fenStr}})
-	} else {
-		room.Player1.Conn.WriteJSON(types.Server{Type: "move", Payload: moveResponse{Fen: fenStr}})
-	}
+	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: moveResponse{Fen: fenStr, Move: moveReq.Move}})
 }
