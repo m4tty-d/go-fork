@@ -129,6 +129,45 @@ func GetRoom(roomID string) types.Room {
 	return list[roomID]
 }
 
+func ActiveNonActivePlayer(room *types.Room) (*types.Player, *types.Player) {
+	color := room.Game.ActiveColor()
+	if room.Player1.Color == color {
+		return room.Player1, room.Player2
+	}
+	return room.Player2, room.Player1
+}
+
+func VerifyTime() {
+	for _, elment := range list {
+		if *elment.IsRunning {
+			activeP, nonActiveP := ActiveNonActivePlayer(&elment)
+
+			*activeP.Stopper = (*activeP.Stopper).Add(-time.Second)
+
+			if activeP.Stopper.Hour() == 23 {
+				activeP.Conn.WriteJSON(types.Server{Type: "clock", Payload: "gameover"})
+				nonActiveP.Conn.WriteJSON(types.Server{Type: "clock", Payload: "gameover"})
+				continue
+			}
+
+			actualTime := types.Stopper{H: activeP.Stopper.Hour(), M: activeP.Stopper.Minute(), S: activeP.Stopper.Second()}
+			activeP.Conn.WriteJSON(types.Server{Type: "clock", Payload: actualTime})
+			nonActiveP.Conn.WriteJSON(types.Server{Type: "enemyClock", Payload: actualTime})
+		}
+	}
+}
+
+/*for _, element := range players {
+	(*element.Time) = (*element.Time).Add(-time.Second)
+	if (*element.Time).Hour() == 23 {
+		// time end
+		element.Conn.WriteJSON(types.Server{Type: "clock", Payload: "end"})
+	} else {
+		h, m, s := element.Time.Clock()
+		element.Conn.WriteJSON(types.Server{Type: "clock", Payload: types.Watch{H: h, M: m, S: s}})
+	}
+}*/
+
 /*var players = make(map[string]types.Player)
 
 func Add(conn *websocket.Conn, time *time.Time) {

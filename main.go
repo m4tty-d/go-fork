@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitlab.com/chess-fork/go-fork/handlers"
+	"gitlab.com/chess-fork/go-fork/rooms"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for range ticker.C {
-			//socketpool.VerifyTime()
+			rooms.VerifyTime()
 		}
 	}()
 	log.Println("Server running on '8089' port!")

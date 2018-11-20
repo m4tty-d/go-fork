@@ -130,6 +130,10 @@ func Move(conn *websocket.Conn, payload string) {
 
 	room := rooms.GetRoom(moveReq.RoomID)
 
+	if !(*room.IsRunning) {
+		*room.IsRunning = true
+	}
+
 	move, err := room.Game.Position().ParseMove(moveReq.Move)
 
 	room.Game.MakeMove(move)
