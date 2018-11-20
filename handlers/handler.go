@@ -17,10 +17,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*time, _ := time.Parse(time.Kitchen, "00:01AM")
-	socketpool.Add(conn, &time)
-	socketpool.Print()*/
-
 	for {
 		client := &types.Client{}
 		err := conn.ReadJSON(client)
@@ -37,8 +33,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			JoinGame(conn, client.Payload)
 		case "move":
 			Move(conn, client.Payload)
-		case "message":
-			//socketpool.SendToAll(clientReq.Payload)
+		case "spectateGame":
+			Spectate(conn, client.Payload)
 		default:
 			return
 		}
