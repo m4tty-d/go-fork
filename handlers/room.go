@@ -5,55 +5,19 @@ import (
 	"log"
 
 	"github.com/andrewbackes/chess/fen"
+	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/gorilla/websocket"
 	"gitlab.com/chess-fork/go-fork/rooms"
 	"gitlab.com/chess-fork/go-fork/types"
 )
 
-type createGameRequest struct {
-	Color          string `json:"color"`
-	BaseTime       int    `json:"baseTime"`
-	AdditionalTime int    `json:"AdditionalTime"`
-}
-
-type createGameResponse struct {
-	RoomID         string `json:"roomId"`
-	BaseTime       int    `json:"baseTime"`
-	AdditionalTime int    `json:"additionalTime"`
-}
-
-type joinGameRequest struct {
-	RoomID string `json:"roomId"`
-}
-
-type createPlayerResponse struct {
-	PlayerID string `json:"playerId"`
-	Color    string `json:"color"`
-}
-
-type joinGameResponse struct {
-	BaseTime       int `json:"baseTime"`
-	AdditionalTime int `json:"additionalTime"`
-}
-
-type moveRequest struct {
-	PlayerID string `json:"playerId"`
-	RoomID   string `json:"roomId"`
-	Move     string `json:"move"`
-}
-
-type moveResponse struct {
-	Fen  string `json:"fen"`
-	Move string `json:"move"`
-}
-
 func isTimeValid(base int, additional int) bool {
 	return base >= 1 && base <= 120 && additional >= 0 && additional <= 120
 }
 
 func CreateRoom(conn *websocket.Conn, payload string) {
-	var createGameReq createGameRequest
+	var createGameReq types.CreateGameRequest
 	err := json.Unmarshal([]byte(payload), &createGameReq)
 	if err != nil {
 		// conn.WriteJSON(types.Server{Type: "error", Payload: "Wrong json format!"})
@@ -72,7 +36,7 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	}
 
 	roomID := rooms.CreateRoom(createGameReq.BaseTime, createGameReq.AdditionalTime)
-	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: createGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
+	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: types.CreateGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
 
 	var color piece.Color
 	if createGameReq.Color == "white" {
@@ -85,13 +49,13 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	if err != nil {
 		conn.WriteJSON(types.Server{Type: "error", Payload: "Error while adding player to room!"})
 	}
-	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: createPlayerResponse{PlayerID: playerID, Color: createGameReq.Color}})
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: types.CreatePlayerResponse{PlayerID: playerID, Color: createGameReq.Color}})
 	rooms.PrintAll()
 }
 
 func JoinGame(conn *websocket.Conn, payload string) {
 	log.Println("!!!!! JOINGAME")
-	var joinGameReq joinGameRequest
+	var joinGameReq types.JoinGameRequest
 	err := json.Unmarshal([]byte(payload), &joinGameReq)
 	if err != nil {
 		// conn.WriteJSON(types.Server{Type: "error", Payload: "Wrong json format!"})
@@ -112,13 +76,13 @@ func JoinGame(conn *websocket.Conn, payload string) {
 		color = "black"
 	}
 
-	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: joinGameResponse{BaseTime: rooms.GetRoom(joinGameReq.RoomID).BaseTime, AdditionalTime: rooms.GetRoom(joinGameReq.RoomID).AdditionalTime}})
-	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: createPlayerResponse{PlayerID: playerID, Color: color}})
+	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: types.JoinGameResponse{BaseTime: rooms.GetRoom(joinGameReq.RoomID).BaseTime, AdditionalTime: rooms.GetRoom(joinGameReq.RoomID).AdditionalTime}})
+	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: types.CreatePlayerResponse{PlayerID: playerID, Color: color}})
 	rooms.NotifyPlayers(joinGameReq.RoomID, types.Server{Type: "gameCanStart"})
 }
 
 func Move(conn *websocket.Conn, payload string) {
-	var moveReq moveRequest
+	var moveReq types.MoveRequest
 	err := json.Unmarshal([]byte(payload), &moveReq)
 
 	if err != nil {
@@ -142,5 +106,14 @@ func Move(conn *websocket.Conn, payload string) {
 
 	fenStr, err := fen.Encode(room.Game.Position())
 
-	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: moveResponse{Fen: fenStr, Move: moveReq.Move}})
+	player := rooms.GetPlayer(moveReq.RoomID, moveReq.PlayerID)
+	playerTime := types.Stopper{H: player.Stopper.Hour(), M: player.Stopper.Minute(), S: player.Stopper.Second()}
+
+	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: types.MoveResponse{Fen: fenStr, Move: moveReq.Move, Time: playerTime}})
+
+	if room.Game.Status() != game.InProgress {
+		rooms.NotifyPlayers(room.ID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: room.Game.Result()}})
+		log.Println(room.Game.Result())
+		*room.IsRunning = false
+	}
 }

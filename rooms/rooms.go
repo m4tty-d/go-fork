@@ -129,6 +129,15 @@ func GetRoom(roomID string) types.Room {
 	return list[roomID]
 }
 
+func GetPlayer(roomID string, playerID string) types.Player {
+	room := GetRoom(roomID)
+	if room.Player1.ID == playerID {
+		return *room.Player1
+	}
+
+	return *room.Player2
+}
+
 func ActiveNonActivePlayer(room *types.Room) (*types.Player, *types.Player) {
 	color := room.Game.ActiveColor()
 	if room.Player1.Color == color {
@@ -138,22 +147,29 @@ func ActiveNonActivePlayer(room *types.Room) (*types.Player, *types.Player) {
 }
 
 func VerifyTime() {
-	for _, element := range list {
-		if *element.IsRunning {
-			activeP, nonActiveP := ActiveNonActivePlayer(&element)
+	for _, room := range list {
+		if *room.IsRunning {
+			activeP, _ := ActiveNonActivePlayer(&room)
 
 			*activeP.Stopper = (*activeP.Stopper).Add(-time.Second)
 
 			if activeP.Stopper.Hour() == 23 {
-				activeP.Conn.WriteJSON(types.Server{Type: "gameover", Payload: "gameover"})
-				nonActiveP.Conn.WriteJSON(types.Server{Type: "gameover", Payload: "gameover"})
-				*element.IsRunning = false
+				// activeP.Conn.WriteJSON(types.Server{Type: "gameover", Payload: "gameover"})
+				// nonActiveP.Conn.WriteJSON(types.Server{Type: "gameover", Payload: "gameover"})
+				result := ""
+				if activeP.Color == piece.White {
+					result = "0-1"
+				} else {
+					result = "1-0"
+				}
+				NotifyPlayers(room.ID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: result}})
+				*room.IsRunning = false
 				continue
 			}
 
-			actualTime := types.Stopper{H: activeP.Stopper.Hour(), M: activeP.Stopper.Minute(), S: activeP.Stopper.Second()}
-			activeP.Conn.WriteJSON(types.Server{Type: "clock", Payload: actualTime})
-			nonActiveP.Conn.WriteJSON(types.Server{Type: "enemyClock", Payload: actualTime})
+			// actualTime := types.Stopper{H: activeP.Stopper.Hour(), M: activeP.Stopper.Minute(), S: activeP.Stopper.Second()}
+			// activeP.Conn.WriteJSON(types.Server{Type: "clock", Payload: actualTime})
+			// nonActiveP.Conn.WriteJSON(types.Server{Type: "enemyClock", Payload: actualTime})
 		}
 	}
 }
