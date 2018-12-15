@@ -1,0 +1,75 @@
+{
+	"ImportPath": "gitlab.com/chess-fork/go-fork",
+	"GoVersion": "go1.11",
+	"GodepVersion": "v80",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/andrewbackes/chess/fen",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/game",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/piece",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/position",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/position/board",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/position/move",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/position/reader",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/andrewbackes/chess/position/square",
+			"Comment": "v1.0-11-g368c396",
+			"Rev": "368c396b53003e00dabf561a33fac771020a90f3"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Comment": "v1.4.0-2-g3130e8d",
+			"Rev": "3130e8d3f1986de7dc3fd86255f4ce9618677508"
+		},
+		{
+			"ImportPath": "github.com/joho/godotenv",
+			"Comment": "v1.3.0-5-g69ed1d9",
+			"Rev": "69ed1d913aa885da390dd6de9febf063d101b097"
+		},
+		{
+			"ImportPath": "github.com/joho/godotenv/autoload",
+			"Comment": "v1.3.0-5-g69ed1d9",
+			"Rev": "69ed1d913aa885da390dd6de9febf063d101b097"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/bson",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/json",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		}
+	]
+}
