@@ -41,13 +41,13 @@ func AddPlayerToRoom(roomID string, conn *websocket.Conn, color piece.Color) (st
 	playerStopper := getTimeFromBaseAndAdditional(list[roomID].BaseTime)
 
 	if color != piece.BothColors {
-		player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper}
+		player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Color: color, Stopper: &playerStopper, DrawOffered: new(bool)}
 		room.Player1 = &player
 		list[roomID] = room
 		return player.ID, "", nil
 	}
 
-	player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Stopper: &playerStopper}
+	player := types.Player{ID: bson.NewObjectId().Hex(), Conn: conn, Stopper: &playerStopper, DrawOffered: new(bool)}
 	if room.Player1.Color == piece.Black {
 		player.Color = piece.White
 	} else {
@@ -136,6 +136,15 @@ func GetPlayer(roomID string, playerID string) types.Player {
 	}
 
 	return *room.Player2
+}
+
+func GetOtherPlayer(roomID string, playerID string) types.Player {
+	room := GetRoom(roomID)
+	if room.Player1.ID == playerID {
+		return *room.Player2
+	}
+
+	return *room.Player1
 }
 
 func ActiveNonActivePlayer(room *types.Room) (*types.Player, *types.Player) {

@@ -32,7 +32,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		case "joinGame":
 			JoinGame(conn, client.Payload)
 		case "move":
-			Move(conn, client.Payload)
+			Move(client.Payload)
+		case "rematch":
+			Rematch(client.Payload)
+		case "resign":
+			Resign(client.Payload)
+		case "offerDraw":
+			OfferDraw(client.Payload)
+		case "acceptDraw":
+			AcceptDraw(client.Payload)
 		case "spectateGame":
 			Spectate(conn, client.Payload)
 		default:

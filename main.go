@@ -3,11 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"gitlab.com/chess-fork/go-fork/handlers"
 	"gitlab.com/chess-fork/go-fork/rooms"
 )
+
+import _ "github.com/joho/godotenv/autoload"
 
 func main() {
 	handlers.Upgrader.CheckOrigin = func(r *http.Request) bool {
@@ -20,7 +23,10 @@ func main() {
 			rooms.VerifyTime()
 		}
 	}()
-	log.Println("Server running on '8089' port!")
+
+	port := os.Getenv("PORT")
+
+	log.Println("Server running on " + port + " port!")
 	http.HandleFunc("/ws", handlers.Handler)
-	log.Fatal(http.ListenAndServe("127.0.0.1:8089", nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

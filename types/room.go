@@ -19,10 +19,11 @@ type Room struct {
 }
 
 type Player struct {
-	ID      string
-	Conn    *websocket.Conn
-	Color   piece.Color
-	Stopper *time.Time
+	ID          string
+	Conn        *websocket.Conn
+	Color       piece.Color
+	Stopper     *time.Time
+	DrawOffered *bool
 }
 
 type Stopper struct {
@@ -71,4 +72,12 @@ type MoveResponse struct {
 
 type GameOverResponse struct {
 	Result string `json:"result"`
+}
+
+type PlayerActionRequest struct {
+	PlayerID string `json:"playerId"`
+	RoomID   string `json:"roomId"`
+}
+
+type RematchResponse struct {
 }
