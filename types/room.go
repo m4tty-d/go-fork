@@ -82,4 +82,6 @@ type PlayerActionRequest struct {
 }
 
 type RematchResponse struct {
+	PlayerScore   float32 `json:"playerScore"`
+	OpponentScore float32 `json:"opponentScore"`
 }

@@ -223,12 +223,14 @@ func IncreasePlayerScores(roomID string, result string) {
 		winnerColor := getWinnerColorByResult(result)
 
 		if winnerColor == room.Player1.Color {
-			room.Player1.Score++
+			(*room.Player1).Score++
 		} else if winnerColor == room.Player2.Color {
-			room.Player2.Score++
+			(*room.Player2).Score++
 		} else {
-			room.Player1.Score += 0.5
-			room.Player2.Score += 0.5
+			(*room.Player1).Score += 0.5
+			(*room.Player2).Score += 0.5
 		}
 	}
+
+	roomMap[roomID] = room
 }

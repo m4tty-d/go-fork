@@ -162,7 +162,10 @@ func Rematch(payload string) {
 
 	rooms.ResetGame(playerActionReq.RoomID)
 
-	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "rematch"})
+	player := rooms.GetPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
+	otherPlayer := rooms.GetOtherPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
+
+	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "rematch", Payload: types.RematchResponse{PlayerScore: player.Score, OpponentScore: otherPlayer.Score}})
 }
 
 // Resign ends the game and notifies players with the result
