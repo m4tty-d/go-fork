@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
@@ -40,8 +41,10 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	roomID := rooms.CreateRoom(createGameReq.BaseTime, createGameReq.AdditionalTime)
 	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: types.CreateGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
 
-	var color piece.Color
-	color.UnmarshalJSON([]byte(createGameReq.Color))
+	color := piece.White
+	if createGameReq.Color == "black" {
+		color = piece.Black
+	}
 
 	playerID, _, err := rooms.AddAPlayerToRoom(roomID, conn, color)
 
@@ -122,13 +125,19 @@ func Move(payload string) {
 
 	player := rooms.GetPlayer(moveReq.RoomID, moveReq.PlayerID)
 	otherPlayer := rooms.GetOtherPlayer(moveReq.RoomID, moveReq.PlayerID)
-	playerTime := player.Stopper.Hour()*60*60 + player.Stopper.Minute()*60 + player.Stopper.Second()
+
+	if room.AdditionalTime != 0 {
+		*player.Stopper = (*player.Stopper).Add(time.Duration(room.AdditionalTime) * time.Second)
+	}
+
+	opponentTime := player.Stopper.Hour()*60*60 + player.Stopper.Minute()*60 + player.Stopper.Second()
+	playerTime := otherPlayer.Stopper.Hour()*60*60 + otherPlayer.Stopper.Minute()*60 + otherPlayer.Stopper.Second()
 
 	if *otherPlayer.DrawOffered {
 		*otherPlayer.DrawOffered = false
 	}
 
-	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: types.MoveResponse{Fen: fenStr, Move: moveReq.Move, Seconds: playerTime}})
+	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: types.MoveResponse{Fen: fenStr, Move: moveReq.Move, PlayerSeconds: playerTime, OpponentSeconds: opponentTime}})
 
 	if room.Game.Status() != game.InProgress {
 		*room.IsRunning = false

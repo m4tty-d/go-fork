@@ -66,9 +66,10 @@ type MoveRequest struct {
 }
 
 type MoveResponse struct {
-	Fen     string `json:"fen"`
-	Move    string `json:"move"`
-	Seconds int    `json:"seconds"`
+	Fen             string `json:"fen"`
+	Move            string `json:"move"`
+	PlayerSeconds   int    `json:"playerSeconds"`
+	OpponentSeconds int    `json:"opponentSeconds"`
 }
 
 type GameOverResponse struct {

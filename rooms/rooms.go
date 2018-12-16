@@ -163,7 +163,7 @@ func VerifyTime() {
 		if *room.IsRunning {
 			activeP, _ := ActiveNonActivePlayer(&room)
 
-			*activeP.Stopper = (*activeP.Stopper).Add(-time.Second).Add(time.Duration(room.AdditionalTime) * time.Second)
+			*activeP.Stopper = (*activeP.Stopper).Add(-time.Second)
 
 			if activeP.Stopper.Hour() == 23 {
 				result := ""
@@ -194,6 +194,8 @@ func ResetGame(roomID string) {
 		*room.IsRunning = false
 
 		room.Player1.Color, room.Player2.Color = room.Player2.Color, room.Player1.Color
+		*room.Player1.Stopper = convertMinutesToTime(room.BaseTime)
+		*room.Player2.Stopper = convertMinutesToTime(room.BaseTime)
 
 		roomMap[roomID] = room
 	}
