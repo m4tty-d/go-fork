@@ -62,6 +62,11 @@
 			"Rev": "69ed1d913aa885da390dd6de9febf063d101b097"
 		},
 		{
+			"ImportPath": "github.com/op/go-logging",
+			"Comment": "v1-7-g970db52",
+			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
 			"ImportPath": "gopkg.in/mgo.v2/bson",
 			"Comment": "r2016.08.01-7-g9856a29",
 			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
