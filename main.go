@@ -25,7 +25,7 @@ func main() {
 		}
 	}()
 
-	port := os.Getenv("APP_PORT")
+	port := os.Getenv("PORT")
 	log.Debug("Server running on port " + port)
 	http.HandleFunc("/ws", handlers.Handler)
 	log.Critical(http.ListenAndServe(":"+port, nil))
