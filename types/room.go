@@ -24,6 +24,7 @@ type Player struct {
 	Color       piece.Color
 	Stopper     *time.Time
 	DrawOffered *bool
+	Score       float32
 }
 
 type Stopper struct {
@@ -65,9 +66,9 @@ type MoveRequest struct {
 }
 
 type MoveResponse struct {
-	Fen  string  `json:"fen"`
-	Move string  `json:"move"`
-	Time Stopper `json:"time"`
+	Fen     string `json:"fen"`
+	Move    string `json:"move"`
+	Seconds int    `json:"seconds"`
 }
 
 type GameOverResponse struct {

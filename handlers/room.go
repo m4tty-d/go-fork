@@ -2,36 +2,38 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
+	"strings"
 
 	"github.com/andrewbackes/chess/fen"
 	"github.com/andrewbackes/chess/game"
 	"github.com/andrewbackes/chess/piece"
 	"github.com/gorilla/websocket"
+	"github.com/op/go-logging"
 	"gitlab.com/chess-fork/go-fork/rooms"
 	"gitlab.com/chess-fork/go-fork/types"
 )
+
+var log = logging.MustGetLogger("log")
 
 func isTimeValid(base int, additional int) bool {
 	return base >= 1 && base <= 120 && additional >= 0 && additional <= 120
 }
 
+// CreateRoom creates a room, insert a player in it, and
+// sends back the room and player infos
 func CreateRoom(conn *websocket.Conn, payload string) {
 	var createGameReq types.CreateGameRequest
 	err := json.Unmarshal([]byte(payload), &createGameReq)
+
 	if err != nil {
-		// conn.WriteJSON(types.Server{Type: "error", Payload: "Wrong json format!"})
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
-	log.Println(createGameReq)
-	log.Println(createGameReq.BaseTime)
-	log.Println(createGameReq.AdditionalTime)
+	log.Info(createGameReq)
 
 	if !isTimeValid(createGameReq.BaseTime, createGameReq.AdditionalTime) {
-		// conn.WriteJSON(types.Server{Type: "error", Payload: "Unsupported time!"})
-		log.Println("timeNotValid")
+		log.Error("Time is not valid")
 		return
 	}
 
@@ -39,60 +41,70 @@ func CreateRoom(conn *websocket.Conn, payload string) {
 	conn.WriteJSON(types.Server{Type: "roomCreated", Payload: types.CreateGameResponse{RoomID: roomID, BaseTime: createGameReq.BaseTime, AdditionalTime: createGameReq.AdditionalTime}})
 
 	var color piece.Color
-	if createGameReq.Color == "white" {
-		color = piece.White
-	} else {
-		color = piece.Black
+	color.UnmarshalJSON([]byte(createGameReq.Color))
+
+	playerID, _, err := rooms.AddAPlayerToRoom(roomID, conn, color)
+
+	if err != nil {
+		log.Error(err)
 	}
 
-	playerID, _, err := rooms.AddPlayerToRoom(roomID, conn, color)
-	if err != nil {
-		conn.WriteJSON(types.Server{Type: "error", Payload: "Error while adding player to room!"})
-	}
 	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: types.CreatePlayerResponse{PlayerID: playerID, Color: createGameReq.Color}})
-	rooms.PrintAll()
 }
 
+// JoinGame insert a player into the given room, and
+// sends back the room and the player infos
 func JoinGame(conn *websocket.Conn, payload string) {
-	log.Println("!!!!! JOINGAME")
 	var joinGameReq types.JoinGameRequest
 	err := json.Unmarshal([]byte(payload), &joinGameReq)
+
 	if err != nil {
-		// conn.WriteJSON(types.Server{Type: "error", Payload: "Wrong json format!"})
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
-	log.Println(joinGameReq)
+	log.Info(joinGameReq)
 
-	playerID, color, err := rooms.AddPlayerToRoom(joinGameReq.RoomID, conn, piece.BothColors)
+	playerID, color, err := rooms.AddAPlayerToRoom(joinGameReq.RoomID, conn, piece.NoColor)
+
 	if err != nil {
+		log.Error(err)
 		return
 	}
 
-	if color == "White" {
-		color = "white"
-	} else {
-		color = "black"
-	}
+	color = strings.ToLower(color)
 
-	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: types.JoinGameResponse{BaseTime: rooms.GetRoom(joinGameReq.RoomID).BaseTime, AdditionalTime: rooms.GetRoom(joinGameReq.RoomID).AdditionalTime}})
+	room, _ := rooms.GetRoom(joinGameReq.RoomID)
+
+	conn.WriteJSON(types.Server{Type: "roomJoined", Payload: types.JoinGameResponse{BaseTime: room.BaseTime, AdditionalTime: room.AdditionalTime}})
 	conn.WriteJSON(types.Server{Type: "playerCreated", Payload: types.CreatePlayerResponse{PlayerID: playerID, Color: color}})
 	rooms.NotifyPlayers(joinGameReq.RoomID, types.Server{Type: "gameCanStart"})
 }
 
+// Move tries to make a move in a given room, and notifies the other player about it.
+// It also checks if the game ended, and if so notifies the players.
 func Move(payload string) {
 	var moveReq types.MoveRequest
 	err := json.Unmarshal([]byte(payload), &moveReq)
 
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
-	log.Println(moveReq)
+	log.Info(moveReq)
 
-	room := rooms.GetRoom(moveReq.RoomID)
+	room, exists := rooms.GetRoom(moveReq.RoomID)
+
+	if !exists {
+		log.Error("No room exists with " + moveReq.RoomID + " ID")
+		return
+	}
+
+	if !rooms.IsPlayerExistsInRoom(moveReq.RoomID, moveReq.PlayerID) {
+		log.Error("No player exists in room " + moveReq.RoomID + " with ID " + moveReq.PlayerID)
+		return
+	}
 
 	if !(*room.IsRunning) {
 		*room.IsRunning = true
@@ -101,65 +113,60 @@ func Move(payload string) {
 	move, err := room.Game.Position().ParseMove(moveReq.Move)
 
 	if err != nil {
+		log.Error(err)
 		return
 	}
 
 	room.Game.MakeMove(move)
-
-	fenStr, err := fen.Encode(room.Game.Position())
+	fenStr, _ := fen.Encode(room.Game.Position())
 
 	player := rooms.GetPlayer(moveReq.RoomID, moveReq.PlayerID)
 	otherPlayer := rooms.GetOtherPlayer(moveReq.RoomID, moveReq.PlayerID)
-	playerTime := types.Stopper{H: player.Stopper.Hour(), M: player.Stopper.Minute(), S: player.Stopper.Second()}
+	playerTime := player.Stopper.Hour()*60*60 + player.Stopper.Minute()*60 + player.Stopper.Second()
 
 	if *otherPlayer.DrawOffered {
 		*otherPlayer.DrawOffered = false
 	}
 
-	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: types.MoveResponse{Fen: fenStr, Move: moveReq.Move, Time: playerTime}})
+	rooms.NotifyOtherPlayer(moveReq.RoomID, moveReq.PlayerID, types.Server{Type: "move", Payload: types.MoveResponse{Fen: fenStr, Move: moveReq.Move, Seconds: playerTime}})
 
 	if room.Game.Status() != game.InProgress {
-		rooms.NotifyPlayers(room.ID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: room.Game.Result()}})
-		log.Println(room.Game.Result())
 		*room.IsRunning = false
+		result := room.Game.Result()
+		log.Info(result)
+
+		rooms.IncreasePlayerScores(room.ID, result)
+
+		rooms.NotifyPlayers(room.ID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: room.Game.Result()}})
 	}
 }
 
+// Rematch resets the game, and notifies players
 func Rematch(payload string) {
 	var playerActionReq types.PlayerActionRequest
 	err := json.Unmarshal([]byte(payload), &playerActionReq)
 
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
-	room := rooms.GetRoom(playerActionReq.RoomID)
+	rooms.ResetGame(playerActionReq.RoomID)
 
-	room = types.Room{ID: room.ID, BaseTime: room.BaseTime, AdditionalTime: room.AdditionalTime, Game: game.New(), IsRunning: new(bool)}
-	room.Game = game.New()
-	*room.IsRunning = false
-
-	if room.Player1.Color == piece.White {
-		room.Player1.Color = piece.Black
-		room.Player2.Color = piece.White
-	} else {
-		room.Player1.Color = piece.White
-		room.Player2.Color = piece.Black
-	}
-
-	rooms.NotifyPlayers(room.ID, types.Server{Type: "rematch", Payload: types.GameOverResponse{Result: room.Game.Result()}})
+	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "rematch"})
 }
 
+// Resign ends the game and notifies players with the result
 func Resign(payload string) {
 	var playerActionReq types.PlayerActionRequest
 	err := json.Unmarshal([]byte(payload), &playerActionReq)
 
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
 		return
 	}
 
+	room, _ := rooms.GetRoom(playerActionReq.RoomID)
 	player := rooms.GetPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
 
 	if &player == nil {
@@ -167,20 +174,24 @@ func Resign(payload string) {
 	}
 
 	result := "1-0"
-
 	if player.Color == piece.White {
 		result = "0-1"
 	}
 
+	rooms.IncreasePlayerScores(playerActionReq.RoomID, result)
+
+	*room.IsRunning = false
+
 	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: result}})
 }
 
+// OfferDraw notifies the other player with the offer
 func OfferDraw(payload string) {
 	var playerActionReq types.PlayerActionRequest
 	err := json.Unmarshal([]byte(payload), &playerActionReq)
 
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
 		return
 	}
 
@@ -191,20 +202,28 @@ func OfferDraw(payload string) {
 	rooms.NotifyOtherPlayer(playerActionReq.RoomID, playerActionReq.PlayerID, types.Server{Type: "drawOffered"})
 }
 
+// AcceptDraw ends the game and notifies the players with the result
 func AcceptDraw(payload string) {
 	var playerActionReq types.PlayerActionRequest
 	err := json.Unmarshal([]byte(payload), &playerActionReq)
 
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
 		return
 	}
 
+	room, _ := rooms.GetRoom(playerActionReq.RoomID)
 	otherPlayer := rooms.GetOtherPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
 
 	if !*otherPlayer.DrawOffered {
 		return
 	}
 
-	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "gameover", Payload: "1/2-1/2"})
+	*room.IsRunning = false
+
+	result := "1/2-1/2"
+
+	rooms.IncreasePlayerScores(playerActionReq.RoomID, result)
+
+	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: result}})
 }

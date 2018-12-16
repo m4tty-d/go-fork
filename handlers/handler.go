@@ -1,19 +1,23 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/op/go-logging"
 	"gitlab.com/chess-fork/go-fork/types"
 )
 
+// Upgrader upgrades the HTTP connection to websocket
 var Upgrader websocket.Upgrader
 
+// Handler handles websocket messages
 func Handler(w http.ResponseWriter, r *http.Request) {
+	log := logging.MustGetLogger("log")
 	conn, err := Upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
@@ -21,7 +25,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		client := &types.Client{}
 		err := conn.ReadJSON(client)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			// rooms.PauseGame(conn)
 			conn.Close()
 			return

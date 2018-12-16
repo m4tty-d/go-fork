@@ -1,18 +1,19 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"time"
 
+	_ "github.com/joho/godotenv/autoload"
 	"gitlab.com/chess-fork/go-fork/handlers"
 	"gitlab.com/chess-fork/go-fork/rooms"
+	"gitlab.com/chess-fork/go-fork/util"
 )
 
-import _ "github.com/joho/godotenv/autoload"
-
 func main() {
+	log := util.InitLogger()
+
 	handlers.Upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
@@ -25,8 +26,7 @@ func main() {
 	}()
 
 	port := os.Getenv("PORT")
-
-	log.Println("Server running on " + port + " port!")
+	log.Debug("Server running on port " + port)
 	http.HandleFunc("/ws", handlers.Handler)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Critical(http.ListenAndServe("127.0.0.1:"+port, nil))
 }
