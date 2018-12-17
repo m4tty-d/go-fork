@@ -47,6 +47,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			AcceptDraw(client.Payload)
 		case "spectateGame":
 			Spectate(conn, client.Payload)
+		case "loadStateBack":
+			LoadStateBack(conn, client.Payload)
 		default:
 			return
 		}

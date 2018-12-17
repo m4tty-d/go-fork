@@ -234,3 +234,7 @@ func IncreasePlayerScores(roomID string, result string) {
 
 	roomMap[roomID] = room
 }
+
+func GetPlayerTimeInSeconds(player types.Player) int {
+	return player.Stopper.Hour()*60*60 + player.Stopper.Minute()*60 + player.Stopper.Second()
+}

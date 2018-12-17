@@ -85,3 +85,13 @@ type RematchResponse struct {
 	PlayerScore   float32 `json:"playerScore"`
 	OpponentScore float32 `json:"opponentScore"`
 }
+
+type StateResponse struct {
+	PlayerColor     string `json:"color"`
+	BaseTime        int    `json:"baseTime"`
+	AdditionalTime  int    `json:"additionalTime"`
+	Fen             string `json:"fen"`
+	PlayerSeconds   int    `json:"playerSeconds"`
+	OpponentSeconds int    `json:"opponentSeconds"`
+	Turn            string `json:"turn"`
+}

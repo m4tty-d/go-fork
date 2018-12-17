@@ -130,8 +130,8 @@ func Move(payload string) {
 		*player.Stopper = (*player.Stopper).Add(time.Duration(room.AdditionalTime) * time.Second)
 	}
 
-	opponentTime := player.Stopper.Hour()*60*60 + player.Stopper.Minute()*60 + player.Stopper.Second()
-	playerTime := otherPlayer.Stopper.Hour()*60*60 + otherPlayer.Stopper.Minute()*60 + otherPlayer.Stopper.Second()
+	opponentTime := rooms.GetPlayerTimeInSeconds(player)
+	playerTime := rooms.GetPlayerTimeInSeconds(otherPlayer)
 
 	if *otherPlayer.DrawOffered {
 		*otherPlayer.DrawOffered = false
@@ -238,4 +238,38 @@ func AcceptDraw(payload string) {
 	rooms.IncreasePlayerScores(playerActionReq.RoomID, result)
 
 	rooms.NotifyPlayers(playerActionReq.RoomID, types.Server{Type: "gameover", Payload: types.GameOverResponse{Result: result}})
+}
+
+func LoadStateBack(conn *websocket.Conn, payload string) {
+	var playerActionReq types.PlayerActionRequest
+	err := json.Unmarshal([]byte(payload), &playerActionReq)
+
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	room, exists := rooms.GetRoom(playerActionReq.RoomID)
+
+	if !exists {
+		log.Error("Room not found")
+		return
+	}
+
+	player := rooms.GetPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
+	otherPlayer := rooms.GetOtherPlayer(playerActionReq.RoomID, playerActionReq.PlayerID)
+
+	opponentTime := rooms.GetPlayerTimeInSeconds(player)
+	playerTime := rooms.GetPlayerTimeInSeconds(otherPlayer)
+
+	fenStr, _ := fen.Encode(room.Game.Position())
+
+	conn.WriteJSON(types.Server{Type: "stateLoaded", Payload: types.StateResponse{
+		PlayerColor:     strings.ToLower(player.Color.String()),
+		BaseTime:        room.BaseTime,
+		AdditionalTime:  room.AdditionalTime,
+		Fen:             fenStr,
+		PlayerSeconds:   playerTime,
+		OpponentSeconds: opponentTime,
+		Turn:            strings.ToLower(room.Game.ActiveColor().String())}})
 }
